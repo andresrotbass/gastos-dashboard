@@ -464,11 +464,37 @@ function fmtARSFull(n) {
 
 async function fetchCSV(gid) {
   const url = csvURL(gid);
-  // Use allorigins proxy to bypass CORS
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const r = await fetch(proxy);
-  const json = await r.json();
-  return parseCSV(json.contents);
+
+  // Try multiple CORS proxies in order
+  const proxies = [
+    async () => {
+      const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error('corsproxy failed');
+      return r.text();
+    },
+    async () => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error('allorigins failed');
+      const j = await r.json();
+      return j.contents;
+    },
+    async () => {
+      const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+      if (!r.ok) throw new Error('codetabs failed');
+      return r.text();
+    },
+  ];
+
+  let lastError;
+  for (const proxy of proxies) {
+    try {
+      const text = await proxy();
+      if (text && text.length > 10) return parseCSV(text);
+    } catch(e) {
+      lastError = e;
+    }
+  }
+  throw lastError || new Error('All proxies failed');
 }
 
 async function loadData() {
