@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mi Billetera</title>
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Billetera">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card: #141414;
+      --card2: #1c1c1c;
+      --border: #252525;
+      --text: #f0ede8;
+      --muted: #666;
+      --muted2: #444;
+      --accent: #a8c97f;
+      --accent2: #7fb89f;
+      --danger: #e07060;
+      --gold: #c9a96e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      padding: 52px 24px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -40px;
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168,201,127,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header-label {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .header-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .header-total {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 4px;
+      letter-spacing: -1px;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    /* ── MONTH TABS ── */
+    .months-wrap {
+      padding: 0 24px 20px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .months-wrap::-webkit-scrollbar { display: none; }
+    .months {
+      display: flex;
+      gap: 8px;
+      width: max-content;
+    }
+    .month-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .month-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0a0a0a;
+      font-weight: 500;
+    }
+    .month-btn:hover:not(.active) {
+      border-color: var(--muted2);
+      color: var(--text);
+    }
+
+    /* ── SECTION ── */
+    .section {
+      padding: 0 24px;
+      margin-bottom: 28px;
+    }
+    .section-title {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── DONUT ── */
+    .donut-wrap {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 24px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .donut-svg-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 120px; height: 120px;
+    }
+    .donut-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .donut-center-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .donut-center-label {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .donut-legend {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-name {
+      flex: 1;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .legend-pct {
+      color: var(--text);
+      font-size: 11px;
+    }
+
+    /* ── CATEGORY CARDS ── */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .cat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--cat-color, var(--accent));
+      opacity: 0.6;
+    }
+    .cat-emoji {
+      font-size: 18px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .cat-name {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .cat-amount {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      color: var(--text);
+      line-height: 1;
+    }
+    .cat-pct {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .cat-bar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--cat-color, var(--accent));
+      transition: width 0.5s ease;
+    }
+
+    /* ── MONTHLY BARS ── */
+    .monthly-chart {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+    .monthly-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      height: 100px;
+      margin-bottom: 8px;
+    }
+    .monthly-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      cursor: pointer;
+    }
+    .monthly-bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+      position: relative;
+      min-height: 4px;
+    }
+    .monthly-bar.active {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .monthly-bar:hover {
+      opacity: 0.8;
+    }
+    .monthly-label {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+    .monthly-label.active { color: var(--accent); }
+
+    /* ── TRANSACTIONS ── */
+    .tx-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tx-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tx-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--card2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .tx-info { flex: 1; min-width: 0; }
+    .tx-desc {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tx-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .tx-amount {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    /* ── LOADING / ERROR ── */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 2px;
+    }
+
+    /* ── FADE IN ── */
+    .fade-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .refresh-btn {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      width: 44px; height: 44px;
+      background: var(--accent);
+      border: none;
+      border-radius: 50%;
+      color: #0a0a0a;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(168,201,127,0.3);
+      transition: transform 0.2s;
+    }
+    .refresh-btn:active { transform: scale(0.92); }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">CARGANDO DATOS</div>
+  </div>
+</div>
+
+<button class="refresh-btn" onclick="loadData()" title="Actualizar">↻</button>
+
+<script>
+const SHEET_ID = '1YvliEXAKl5jtLbT-ydlssjqe1XtJsBDwiUNK-IZ1U30';
+const GID_RESUMEN = '0';
+const GID_GASTOS = '960684416';
+
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+const CAT_CONFIG = {
+  'Expensas':       { emoji: '🏢', color: '#c9a96e' },
+  'Jas':            { emoji: '👧', color: '#e07088' },
+  'Salud':          { emoji: '💊', color: '#7fb8d8' },
+  'Transporte':     { emoji: '🚇', color: '#9b8fcf' },
+  'Supermercado':   { emoji: '🛒', color: '#a8c97f' },
+  'Entretenimiento':{ emoji: '🎭', color: '#e0a060' },
+  'Hogar':          { emoji: '🏠', color: '#7fb89f' },
+  'Cafe / Comida':  { emoji: '☕', color: '#c97f7f' },
+  'Terapia':        { emoji: '🧠', color: '#b8a0d8' },
+  'Otro':           { emoji: '📦', color: '#888' },
+};
+
+let state = {
+  resumen: [],
+  gastos: [],
+  selectedMonth: null,
+};
+
+function csvURL(gid) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).map(line => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let c of line) {
+      if (c === '"') inQ = !inQ;
+      else if (c === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else cur += c;
+    }
+    cols.push(cur);
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (cols[i] || '').trim().replace(/^"|"$/g, ''));
+    return obj;
+  });
+}
+
+function parseARS(str) {
+  if (!str) return 0;
+  return parseFloat(str.replace(/[$,]/g, '')) || 0;
+}
+
+function fmtARS(n) {
+  if (n === 0) return '$0';
+  if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '$' + Math.round(n/1000) + 'K';
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+function fmtARSFull(n) {
+  return '$' + Math.round(n).toLocaleString('es-AR');
+}
+
+async function fetchCSV(gid) {
+  const url = csvURL(gid);
+  // Use allorigins proxy to bypass CORS
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const r = await fetch(proxy);
+  const json = await r.json();
+  return parseCSV(json.contents);
+}
+
+async function loadData() {
+  document.getElementById('app').innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">CARGANDO DATOS</div>
+    </div>`;
+
+  try {
+    const [resumen, gastos] = await Promise.all([
+      fetchCSV(GID_RESUMEN),
+      fetchCSV(GID_GASTOS),
+    ]);
+
+    state.resumen = resumen.filter(r => r['Mes'] && parseARS(r['Total']) > 0);
+    state.gastos = gastos.filter(g => g['Fecha'] && parseARS(g['Importe (ARS)']) > 0);
+
+    // Select most recent month with data
+    if (state.resumen.length > 0) {
+      state.selectedMonth = state.resumen[state.resumen.length - 1]['Mes'];
+    }
+
+    render();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('app').innerHTML = `
+      <div class="loading">
+        <div style="font-size:32px">⚠️</div>
+        <div class="loading-text">ERROR AL CARGAR</div>
+        <div style="font-size:12px;color:#666;margin-top:8px;text-align:center;padding:0 40px">
+          Asegurate que el Sheet sea público (compartir → cualquier persona con el enlace)
+        </div>
+      </div>`;
+  }
+}
+
+function selectMonth(mes) {
+  state.selectedMonth = mes;
+  render();
+}
+
+function render() {
+  const { resumen, gastos, selectedMonth } = state;
+  const monthData = resumen.find(r => r['Mes'] === selectedMonth) || {};
+  const total = parseARS(monthData['Total']);
+
+  // Get transactions for selected month
+  const mesIdx = MESES.indexOf(selectedMonth);
+  const monthTxs = gastos.filter(g => {
+    const parts = g['Fecha'].split('/');
+    return parts.length === 3 && parseInt(parts[1]) - 1 === mesIdx;
+  }).sort((a, b) => {
+    const [da, ma, ya] = a['Fecha'].split('/').map(Number);
+    const [db, mb, yb] = b['Fecha'].split('/').map(Number);
+    return new Date(yb, mb-1, db) - new Date(ya, ma-1, da);
+  });
+
+  // Category breakdown from resumen row
+  const cats = Object.keys(CAT_CONFIG).map(cat => ({
+    name: cat,
+    amount: parseARS(monthData[cat]),
+    ...CAT_CONFIG[cat],
+  })).filter(c => c.amount > 0).sort((a, b) => b.amount - a.amount);
+
+  const html = `
+    <div class="fade-in">
+      <!-- HEADER -->
+      <div class="header">
+        <div class="header-label">MI BILLETERA • ${new Date().getFullYear()}</div>
+        <div class="header-title">${selectedMonth}</div>
+        <div class="header-total">${fmtARSFull(total)}</div>
+        <div class="header-sub">${monthTxs.length} transacciones registradas</div>
+      </div>
+
+      <!-- MONTH TABS -->
+      <div class="months-wrap">
+        <div class="months">
+          ${resumen.map(r => `
+            <button class="month-btn ${r['Mes'] === selectedMonth ? 'active' : ''}"
+              onclick="selectMonth('${r['Mes']}')">
+              ${r['Mes'].slice(0,3).toUpperCase()}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- MONTHLY EVOLUTION -->
+      <div class="section">
+        <div class="section-title">Evolución mensual</div>
+        ${renderMonthlyChart(resumen, selectedMonth)}
+      </div>
+
+      <!-- DONUT -->
+      ${cats.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Distribución</div>
+        <div class="donut-wrap">
+          ${renderDonut(cats, total)}
+          <div class="donut-legend">
+            ${cats.slice(0, 6).map(c => `
+              <div class="legend-item">
+                <div class="legend-dot" style="background:${c.color}"></div>
+                <span class="legend-name">${c.name}</span>
+                <span class="legend-pct">${Math.round(c.amount/total*100)}%</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>` : ''}
+
+      <!-- CATEGORY CARDS -->
+      ${cats.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Por categoría</div>
+        <div class="cat-grid">
+          ${cats.map(c => `
+            <div class="cat-card" style="--cat-color:${c.color}">
+              <span class="cat-emoji">${c.emoji}</span>
+              <div class="cat-name">${c.name}</div>
+              <div class="cat-amount">${fmtARS(c.amount)}</div>
+              <div class="cat-pct">${Math.round(c.amount/total*100)}% del total</div>
+              <div class="cat-bar">
+                <div class="cat-bar-fill" style="width:${Math.round(c.amount/total*100)}%;background:${c.color}"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- TRANSACTIONS -->
+      ${monthTxs.length > 0 ? `
+      <div class="section">
+        <div class="section-title">Movimientos</div>
+        <div class="tx-list">
+          ${monthTxs.map(tx => {
+            const cat = CAT_CONFIG[tx['Categoria']] || { emoji: '📦', color: '#888' };
+            return `
+            <div class="tx-item">
+              <div class="tx-icon" style="background:${cat.color}22">${cat.emoji}</div>
+              <div class="tx-info">
+                <div class="tx-desc">${tx['Descripcion'] || tx['Proveedor']}</div>
+                <div class="tx-meta">${tx['Fecha']} · ${tx['Categoria']}</div>
+              </div>
+              <div class="tx-amount">${fmtARS(parseARS(tx['Importe (ARS)']))}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : `
+      <div class="section">
+        <div style="text-align:center;padding:40px 0;color:var(--muted);font-size:12px;letter-spacing:2px">
+          SIN MOVIMIENTOS
+        </div>
+      </div>`}
+    </div>`;
+
+  document.getElementById('app').innerHTML = html;
+}
+
+function renderDonut(cats, total) {
+  const size = 120, cx = 60, cy = 60, r = 44, stroke = 14;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const slices = cats.map(c => {
+    const pct = c.amount / total;
+    const dash = pct * circ;
+    const gap = circ - dash;
+    const slice = `<circle cx="${cx}" cy="${cy}" r="${r}"
+      fill="none" stroke="${c.color}" stroke-width="${stroke}"
+      stroke-dasharray="${dash} ${gap}"
+      stroke-dashoffset="${-offset}"
+      transform="rotate(-90 ${cx} ${cy})"
+      opacity="0.85"/>`;
+    offset += dash;
+    return slice;
+  }).join('');
+
+  const topCat = cats[0];
+  const topPct = Math.round(topCat.amount / total * 100);
+
+  return `
+    <div class="donut-svg-wrap">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1c1c1c" stroke-width="${stroke}"/>
+        ${slices}
+      </svg>
+      <div class="donut-center">
+        <div class="donut-center-val">${topPct}%</div>
+        <div class="donut-center-label">${topCat.name.split('/')[0].trim().toUpperCase().slice(0,6)}</div>
+      </div>
+    </div>`;
+}
+
+function renderMonthlyChart(resumen, selectedMonth) {
+  const maxTotal = Math.max(...resumen.map(r => parseARS(r['Total'])));
+  return `
+    <div class="monthly-chart">
+      <div class="monthly-bars">
+        ${resumen.map(r => {
+          const pct = maxTotal > 0 ? (parseARS(r['Total']) / maxTotal * 100) : 0;
+          const isActive = r['Mes'] === selectedMonth;
+          return `
+            <div class="monthly-bar-wrap" onclick="selectMonth('${r['Mes']}')">
+              <div class="monthly-bar ${isActive ? 'active' : ''}"
+                style="height:${Math.max(pct, 4)}%"
+                title="${r['Mes']}: ${fmtARSFull(parseARS(r['Total']))}">
+              </div>
+              <div class="monthly-label ${isActive ? 'active' : ''}">${r['Mes'].slice(0,3).toUpperCase()}</div>
+            </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+loadData();
+</script>
+</body>
+</html>
