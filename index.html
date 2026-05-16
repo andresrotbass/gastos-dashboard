@@ -455,11 +455,20 @@ function fmtUSD(arsAmount) {
 
 async function fetchSheet(sheetName) {
   const url = API_URL + '?sheet=' + encodeURIComponent(sheetName);
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const json = await r.json();
-  if (!json.ok) throw new Error(json.error || 'Error en el servidor');
-  return json.data;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const json = await r.json();
+    if (!json.ok) throw new Error(json.error || 'Error en el servidor');
+    return json.data;
+  } catch(e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') throw new Error('Tiempo agotado. Reintentá.');
+    throw e;
+  }
 }
 
 async function fetchDolarBlue() {
@@ -484,13 +493,34 @@ async function loadData() {
     <div class="loading">
       <div class="spinner"></div>
       <div class="loading-text">CARGANDO DATOS</div>
+      <div id="load-hint" style="font-size:11px;color:#555;margin-top:12px;text-align:center;padding:0 40px;line-height:1.8">
+        Conectando con Google Sheets...<br>
+        <span style="color:#444">Puede tardar hasta 20 segundos si el servidor está inactivo ☕</span>
+      </div>
     </div>`;
+
+  // Animated hints while loading
+  const hints = [
+    'Despertando el servidor...',
+    'Leyendo el Sheet de Gastos...',
+    'Calculando totales...',
+    'Casi listo...',
+  ];
+  let hintIdx = 0;
+  const hintTimer = setInterval(() => {
+    const el = document.getElementById('load-hint');
+    if (el && hintIdx < hints.length) {
+      el.innerHTML = hints[hintIdx] + '<br><span style="color:#444">Apps Script puede tardar hasta 20 seg la primera vez ☕</span>';
+      hintIdx++;
+    }
+  }, 4000);
 
   try {
     const [resumen, gastos] = await Promise.all([
       fetchSheet('Resúmen Mensual'),
       fetchSheet('Gastos'),
     ]);
+    clearInterval(hintTimer);
 
     state.resumen = resumen.filter(r => r['Mes'] && parseARS(r['Total']) > 0);
     state.gastos = gastos.filter(g => g['Fecha'] && parseARS(g['Importe (ARS)']) > 0);
@@ -509,13 +539,15 @@ async function loadData() {
       }
     });
   } catch(e) {
+    clearInterval(hintTimer);
     console.error(e);
     document.getElementById('app').innerHTML = `
       <div class="loading">
         <div style="font-size:32px">⚠️</div>
         <div class="loading-text">ERROR AL CARGAR</div>
-        <div style="font-size:12px;color:#666;margin-top:8px;text-align:center;padding:0 40px">
-          ${e.message}
+        <div style="font-size:12px;color:#666;margin-top:12px;text-align:center;padding:0 40px;line-height:1.8">
+          ${e.message}<br>
+          <span style="color:#888">Tocá el botón ↻ para reintentar</span>
         </div>
       </div>`;
   }
