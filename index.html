@@ -469,7 +469,7 @@ async function fetchDolarBlue() {
   ];
   for (const api of APIS) {
     try {
-      const r = await fetch(api.url, { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(api.url, { signal: AbortSignal.timeout(3000) });
       if (!r.ok) continue;
       const d = await r.json();
       const val = api.parse(d);
@@ -487,21 +487,27 @@ async function loadData() {
     </div>`;
 
   try {
-    const [resumen, gastos, dolar] = await Promise.all([
+    const [resumen, gastos] = await Promise.all([
       fetchSheet('Resúmen Mensual'),
       fetchSheet('Gastos'),
-      fetchDolarBlue(),
     ]);
 
     state.resumen = resumen.filter(r => r['Mes'] && parseARS(r['Total']) > 0);
     state.gastos = gastos.filter(g => g['Fecha'] && parseARS(g['Importe (ARS)']) > 0);
-    state.dolarBlue = dolar;
 
     if (state.resumen.length > 0) {
       state.selectedMonth = state.resumen[state.resumen.length - 1]['Mes'];
     }
 
     render();
+
+    // Fetch dolar in background — won't block loading
+    fetchDolarBlue().then(dolar => {
+      if (dolar) {
+        state.dolarBlue = dolar;
+        render(); // re-render with USD values
+      }
+    });
   } catch(e) {
     console.error(e);
     document.getElementById('app').innerHTML = `
