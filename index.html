@@ -602,37 +602,30 @@ function calcUSD() {
   if (!resumen.length) { el.innerHTML = '<div style="color:#666;font-size:13px">Cargá los datos primero</div>'; return; }
 
   // Build rows: selected month + all months + grand total
-  const rows = [];
+  // All months — reversed (most recent first), no duplicates
+  const monthRows = resumen
+    .filter(r => parseARS(r['Total']) > 0)
+    .slice()
+    .reverse()
+    .map(r => ({ label: r['Mes'], ars: parseARS(r['Total']) }));
 
-  // Selected month
-  const monthData = resumen.find(r => r['Mes'] === selectedMonth) || {};
-  const monthTotal = parseARS(monthData['Total']);
-  if (monthTotal > 0) {
-    rows.push({ label: selectedMonth + ' (mes actual)', ars: monthTotal });
-  }
+  // Grand total + average
+  const grandTotal = monthRows.reduce((s, r) => s + r.ars, 0);
+  const avg = Math.round(grandTotal / monthRows.length);
 
-  // All months
-  resumen.forEach(r => {
-    const t = parseARS(r['Total']);
-    if (t > 0) rows.push({ label: r['Mes'], ars: t });
-  });
-
-  // Grand total
-  const grandTotal = resumen.reduce((s, r) => s + parseARS(r['Total']), 0);
-  rows.push({ label: 'Total general', ars: grandTotal, highlight: true });
-
-  // Remove duplicate of selected month
-  const unique = [];
-  const seen = new Set();
-  rows.forEach(r => {
-    if (!seen.has(r.label)) { seen.add(r.label); unique.push(r); }
-  });
+  const unique = [
+    ...monthRows,
+    { label: 'Promedio mensual', ars: avg, muted: true },
+    { label: 'Total general', ars: grandTotal, highlight: true },
+  ];
 
   el.innerHTML = unique.map(r => {
     const usd = Math.round(r.ars / blue);
-    return `<div class="usd-row" style="${r.highlight ? 'background:#1e2a1e;border:1px solid #2d5a2d' : ''}">
-      <span class="usd-row-label">${r.label}</span>
-      <span class="usd-row-val" style="${r.highlight ? 'color:#4caf50' : ''}">USD ${usd.toLocaleString('es-AR')}</span>
+    const bg = r.highlight ? 'background:#1e2a1e;border:1px solid #2d5a2d' : r.muted ? 'background:#1a1a1a;border:1px solid #2a2a2a' : '';
+    const color = r.highlight ? 'color:#4caf50' : r.muted ? 'color:#888' : '';
+    return `<div class="usd-row" style="${bg}">
+      <span class="usd-row-label" style="${r.muted ? 'color:#666' : ''}">${r.label}</span>
+      <span class="usd-row-val" style="${color}">USD ${usd.toLocaleString('es-AR')}</span>
     </div>`;
   }).join('');
 }
