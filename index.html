@@ -426,6 +426,7 @@ let state = {
   resumen: [],
   gastos: [],
   selectedMonth: null,
+  dolarBlue: null,
 };
 
 function parseARS(str) {
@@ -445,6 +446,13 @@ function fmtARSFull(n) {
   return '$' + Math.round(n).toLocaleString('es-AR');
 }
 
+function fmtUSD(arsAmount) {
+  const blue = state.dolarBlue;
+  if (!blue || blue <= 0) return '';
+  const usd = arsAmount / blue;
+  return ' (USD ' + usd.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}) + ')';
+}
+
 async function fetchSheet(sheetName) {
   const url = API_URL + '?sheet=' + encodeURIComponent(sheetName);
   const r = await fetch(url);
@@ -452,6 +460,23 @@ async function fetchSheet(sheetName) {
   const json = await r.json();
   if (!json.ok) throw new Error(json.error || 'Error en el servidor');
   return json.data;
+}
+
+async function fetchDolarBlue() {
+  const APIS = [
+    { url: 'https://dolarapi.com/v1/dolares/blue', parse: d => (d.compra + d.venta) / 2 },
+    { url: 'https://api.bluelytics.com.ar/v2/latest', parse: d => (d.blue.value_buy + d.blue.value_sell) / 2 },
+  ];
+  for (const api of APIS) {
+    try {
+      const r = await fetch(api.url, { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) continue;
+      const d = await r.json();
+      const val = api.parse(d);
+      if (val && val > 100) return Math.round(val);
+    } catch(e) { /* try next */ }
+  }
+  return null;
 }
 
 async function loadData() {
@@ -462,13 +487,15 @@ async function loadData() {
     </div>`;
 
   try {
-    const [resumen, gastos] = await Promise.all([
+    const [resumen, gastos, dolar] = await Promise.all([
       fetchSheet('Resúmen Mensual'),
       fetchSheet('Gastos'),
+      fetchDolarBlue(),
     ]);
 
     state.resumen = resumen.filter(r => r['Mes'] && parseARS(r['Total']) > 0);
     state.gastos = gastos.filter(g => g['Fecha'] && parseARS(g['Importe (ARS)']) > 0);
+    state.dolarBlue = dolar;
 
     if (state.resumen.length > 0) {
       state.selectedMonth = state.resumen[state.resumen.length - 1]['Mes'];
@@ -522,7 +549,7 @@ function render() {
       <div class="header">
         <div class="header-label">MI BILLETERA • ${new Date().getFullYear()}</div>
         <div class="header-title">${selectedMonth}</div>
-        <div class="header-total">${fmtARSFull(total)}</div>
+        <div class="header-total">${fmtARSFull(total)}${fmtUSD(total)}</div>
         <div class="header-sub">${monthTxs.length} transacciones registradas</div>
       </div>
 
@@ -567,17 +594,26 @@ function render() {
       <div class="section">
         <div class="section-title">Por categoría</div>
         <div class="cat-grid">
-          ${cats.map(c => `
+          ${cats.map(c => {
+            const isTerapia = c.name === 'Terapia';
+            const sesiones = isTerapia
+              ? monthTxs.filter(tx => tx['Categoria'] === 'Terapia').length
+              : null;
+            const pct = Math.round(c.amount/total*100);
+            const pctLine = isTerapia
+              ? `${pct}% · ${sesiones} sesión${sesiones !== 1 ? 'es' : ''}`
+              : `${pct}% del total`;
+            return `
             <div class="cat-card" style="--cat-color:${c.color}">
               <span class="cat-emoji">${c.emoji}</span>
               <div class="cat-name">${c.name}</div>
-              <div class="cat-amount">${fmtARS(c.amount)}</div>
-              <div class="cat-pct">${Math.round(c.amount/total*100)}% del total</div>
+              <div class="cat-amount">${fmtARS(c.amount)}${fmtUSD(c.amount)}</div>
+              <div class="cat-pct">${pctLine}</div>
               <div class="cat-bar">
-                <div class="cat-bar-fill" style="width:${Math.round(c.amount/total*100)}%;background:${c.color}"></div>
+                <div class="cat-bar-fill" style="width:${pct}%;background:${c.color}"></div>
               </div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
       </div>` : ''}
 
@@ -595,7 +631,7 @@ function render() {
                 <div class="tx-desc">${tx['Descripcion'] || tx['Proveedor']}</div>
                 <div class="tx-meta">${tx['Fecha']} · ${tx['Categoria']}</div>
               </div>
-              <div class="tx-amount">${fmtARS(parseARS(tx['Importe (ARS)']))}</div>
+              <div class="tx-amount">${fmtARS(parseARS(tx['Importe (ARS)']))}${fmtUSD(parseARS(tx['Importe (ARS)')))}</div>
             </div>`;
           }).join('')}
         </div>
