@@ -643,7 +643,7 @@ async function loadData() {
       fetchSheet('Gastos'),
     ]);
 
-    state.resumen = resumen.filter(r => r['Mes'] && parseARS(r['Total']) > 0);
+    state.resumen = resumen.filter(r => r['Mes'] && MESES.includes(r['Mes']) && parseARS(r['Total']) > 0);
     state.gastos = gastos.filter(g => g['Fecha'] && parseARS(g['Importe (ARS)']) > 0);
 
     if (state.resumen.length > 0) {
